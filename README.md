@@ -1,42 +1,69 @@
-# Majora's Mask: Recompiled Mod Template
+# MM Recomp Save Editor
 
-This is an example mod for Majora's Mask: Recompiled that can be used as a template for creating mods. It has a basic build system, headers, sample code, and a mod config toml.
+A save editor for Zelda 64: Recompiled.
 
-Example code for using the recompui API to build ingame UI can be found in the `ui-example` branch.
+The editor opens in-game and writes directly to the active save context. It is meant for quick testing, routing, restoration, and experimentation without leaving Zelda 64: Recompiled.
 
-### Writing mods
-See [this document](https://hackmd.io/fMDiGEJ9TBSjomuZZOgzNg) for an explanation of the modding framework, including how to write function patches and perform interop between different mods.
+## Features
 
-### Tools
-You'll need to install `clang` and `make` to build this template.
-* On Windows, using [chocolatey](https://chocolatey.org/) to install both is recommended. The packages are `llvm` and `make` respectively.
-  * The LLVM 19.1.0 [llvm-project](https://github.com/llvm/llvm-project) release binary, which is also what chocolatey provides, does not support MIPS correctly. The solution is to install 18.1.8 instead, which can be done in chocolatey by specifying `--version 18.1.8` or by downloading the 18.1.8 release directly.
-* On Linux, these can both be installed using your distro's package manager. You may also need to install your distro's package for the `lld` linker. On Debian/Ubuntu based distros this will be the `lld` package.
-* On MacOS, these can both be installed using Homebrew. Apple clang won't work, as you need a mips target for building the mod code.
+- Edit name, day, time, time speed, Tatl, intro-complete state, and owl-save state.
+- Adjust wallet, held rupees, bank rupees, hearts, health, magic, double defense, Great Spin, and Chateau Romani.
+- Set sword, shield, quiver, bomb bag, Deku Stick and Deku Nut upgrades, ammo counts, powder keg, major inventory items, and all masks.
+- Toggle Bombers Notebook, remains, songs, skull tokens, dungeon maps, compasses, boss keys, small keys, and stray fairies.
+- Use quick actions for maxing or resetting quest and dungeon progress.
 
-On Linux and MacOS, you'll need to also ensure that you have the `zip` utility installed.
+## Usage
 
-You'll also need to grab a build of the `RecompModTool` utility from the releases of [N64Recomp](https://github.com/N64Recomp/N64Recomp). You can also build it yourself from that repo if desired.
+1. Install the `.nrm` file in Zelda 64: Recompiled.
+2. Enable the mod from the Mods menu.
+3. Start or load a save file.
+4. Open the editor with the configured hotkey.
+5. Make changes and press `Apply`.
 
-### Building
-* First, run `make` (with an optional job count) to build the mod code itself.
-* Next, run the `RecompModTool` utility with `mod.toml` as the first argument and the build dir (`build` in the case of this template) as the second argument.
-  * This will produce your mod's `.nrm` file in the build folder.
-  * If you're on MacOS, you may need to specify the path to the `clang` and `ld.lld` binaries using the `CC` and `LD` environment variables, respectively.
+Default hotkey:
 
-### Updating the Majora's Mask Decompilation Submodule
-Mods can also be made with newer versions of the Majora's Mask decompilation instead of the commit targeted by this repo's submodule.
-To update the commit of the decompilation that you're targeting, follow these steps:
-* Build the [N64Recomp](https://github.com/N64Recomp/N64Recomp) repo and copy the N64Recomp executable to the root of this repository.
-  * Make sure you pass `KEEP_MDEBUG=1` to `make` when building the decomp in order to keep debug information. This must be done from a clean build if you have built the decomp already without `KEEP_MDEBUG=1`.
-* Build the version of the Majora's Mask decompilation that you want to update to and copy the resulting .elf file to the root of this repository.
-* Update the `mm-decomp` submodule in your clone of this repo to point to the commit you built in the previous step.
-* Run `N64Recomp generate_symbols.toml --dump-context`
-* Rename `dump.toml` and `data_dump.toml` to `mm.us.rev1.syms.toml` and `mm.us.rev1.datasyms.toml` respectively.
-  * Place both files in the `Zelda64RecompSyms` folder.
-* Try building.
-  * If it succeeds, you're done.
-  * If it fails due to a missing header, create an empty header file in the `include/dummy_headers` folder, with the same path.
-    * For example, if it complains that `assets/objects/object_cow/object_cow.h` is missing, create an empty `include/dummy_headers/objects/object_cow.h` file.
-  * If RecompModTool fails due to a function "being marked as a patch but not existing in the original ROM", it's likely that function you're patching was renamed in the Majora's Mask decompilation.
-    * Find the relevant function in the map file for the old decomp commit, then go to that address in the new map file, and update the reference to this function in your code with the new name.
+```text
+L + C-Up
+```
+
+The hotkey can be changed or disabled from `Mods > Save Editor > Configure`.
+
+The Configure menu also includes a small setup section for applying name, day, Tatl, intro-complete, and owl-save values when a chosen save file opens.
+
+## Notes
+
+- Edits are applied to the currently loaded save. Save normally in-game if you want the changes persisted.
+- Some fields affect live game state immediately; others may be easier to verify after changing rooms, saving, or reloading.
+- Keep a backup of important saves before testing large changes.
+
+## Building
+
+Initialize submodules first:
+
+```sh
+git submodule update --init --recursive
+```
+
+Build the mod code:
+
+```sh
+make
+```
+
+On macOS, Apple Clang cannot build MIPS code. Use an LLVM release with MIPS support and pass `CC`/`LD` explicitly:
+
+```sh
+make CC=/path/to/llvm/bin/clang LD=/path/to/llvm/bin/ld.lld
+```
+
+Package the mod:
+
+```sh
+RecompModTool mod.toml build
+```
+
+The packaged mod is written to:
+
+```text
+build/mm_recomp_save_editor.nrm
+```

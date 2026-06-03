@@ -1,96 +1,31 @@
-# Config file for an example Majora's Mask: Recompiled mod.
-
-# Fields that end up in the mod's manifest.
 [manifest]
-
-# Unique ID of this mod. Pick something long enough that it'll never be the same as any other mod.
-# The name displayed in the mod management menu is separate from this so this doesn't need to be human readable.
-id = "mm_recomp_mod_template"
-
-# Version of this mod.
-version = "1.0.0"
-
-# The name that will show up for this mod in the mod menu. This should be human readable.
-display_name = "Always Spin Attack"
-
-# The description that will show up when this mod is displayed in the mod menu. This should be human readable.
+id = "mm_recomp_save_editor"
+version = "1.0.1"
+display_name = "Save Editor"
 description =  """
-This is an example mod for Majora's Mask: Recompiled that can be used as a template for creating mods. \
-When this mod is enabled, you will always perform a quickspin when swinging your sword.
-
-For more details, see https://github.com/Zelda64Recomp/MMRecompModTemplate."""
-
-# A short description that will show up in this mod's entry in the mod list. This should be human readable and kept short
-# to prevent it from being cut off due to the limited space.
-short_description = "Always perform a quickspin when swinging your sword."
-
-# Authors of this mod.
-authors = [ "Your name here" ]
-
-# ID of the target recomp game.
+A save editor for Zelda 64: Recompiled with in-game editing for player status, equipment, quest flags, and dungeon progress."""
+short_description = "Edit MM save data in-game."
+authors = [ "Linkzenic" ]
 game_id = "mm"
-
-# Minimum version of the target recomp (e.g. Zelda 64: Recompiled) that this mod can run on.
 minimum_recomp_version = "1.2.2"
+dependencies = []
+optional_dependencies = []
+native_libraries = []
 
-# Dependency mods. Each entry is the mod's ID and then an optional minimum version of the dependency mod.
-dependencies = [
-# Example dependency:
-#    "modname:1.0.0"
+config_options = [
+    { id = "editor_hotkey", name = "Editor Hotkey", description = "Button combo used to open the in-game editor.", type = "Enum", options = [ "L + C-Up", "L + D-Up", "L + R + D-Up", "L + R", "Disabled" ], default = "L + C-Up" },
+    { id = "configure_auto_apply", name = "Apply Setup on Load", description = "Apply the setup values below when the chosen save file opens. Changes made during gameplay are applied live.", type = "Enum", options = [ "Off", "On" ], default = "Off" },
+    { id = "configure_target_file", name = "Setup Save File", description = "Choose which save file receives setup values. Next opened file applies to whichever save is loaded next.", type = "Enum", options = [ "Next opened file", "File 1", "File 2", "File 3" ], default = "Next opened file" },
+    { id = "configure_name", name = "Setup Name", description = "Player name to apply. Leave blank to keep the current name.", type = "String", default = "" },
+    { id = "configure_day", name = "Setup Day", description = "Day to apply. Preserve keeps the current day.", type = "Enum", options = [ "Preserve", "Day 1", "Day 2", "Day 3", "Final Day" ], default = "Preserve" },
+    { id = "configure_has_tatl", name = "Setup Tatl", description = "Set whether the save has Tatl.", type = "Enum", options = [ "Preserve", "No", "Yes" ], default = "Preserve" },
+    { id = "configure_intro_complete", name = "Setup Intro Complete", description = "Set the intro-complete flag.", type = "Enum", options = [ "Preserve", "No", "Yes" ], default = "Preserve" },
+    { id = "configure_owl_save", name = "Setup Owl Save", description = "Set the owl-save flag.", type = "Enum", options = [ "Preserve", "No", "Yes" ], default = "Preserve" },
 ]
 
-# Optional dependency mods. This has the same format as `dependencies`, but the game will still start if dependencies in this
-# list aren't present. You can query the presence of a given dependency by using `recomp_is_dependency_met` in recomputils.h.
-# Calling a function imported from an optional dependency that isn't present will trigger an error.
-optional_dependencies = [
-
-]
-
-# Native libraries (e.g. DLLs) and the functions they export.
-native_libraries = [
-# Example native library:
-#    { name = "my_native_library", funcs = ["my_native_library_function"] }
-]
-
-# Inputs to the mod tool.
 [inputs]
-
-# Input elf file to generate a mod from.
 elf_path = "build/mod.elf"
-
-# Output mod filename.
-mod_filename = "mm_recomp_mod_template"
-
-# Reference symbol files.
+mod_filename = "mm_recomp_save_editor"
 func_reference_syms_file = "Zelda64RecompSyms/mm.us.rev1.syms.toml"
 data_reference_syms_files = [ "Zelda64RecompSyms/mm.us.rev1.datasyms.toml", "Zelda64RecompSyms/mm.us.rev1.datasyms_static.toml" ]
-
-# Additional files to include in the mod.
-additional_files = [ ]
-
-[[manifest.config_options]]
-id = "enum_option"
-name = "Enum Option"
-description = "Test enum config option"
-type = "Enum"
-options = [ "First", "Second" ]
-default = "First"
-
-[[manifest.config_options]]
-id = "number_option"
-name = "Number Option"
-description = "Test number config option."
-type = "Number"
-min = 0
-max = 10
-step = 0.1
-precision = 1
-percent = false
-default = 1
-
-[[manifest.config_options]]
-id = "string_option"
-name = "String Option"
-description = "Test string config option."
-type = "String"
-default = "Lorem Ipsum"
+additional_files = [ "thumb.png" ]
