@@ -16,6 +16,9 @@
 #define SAVE_EDITOR_TINGLE_MAP_COUNT 6
 #define SAVE_EDITOR_BOTTLE_COUNT 6
 #define SAVE_EDITOR_BOTTLE_CONTENT_COUNT 22
+#define SAVE_EDITOR_PAGE_HEIGHT 610.0f
+#define SAVE_EDITOR_BOTTLE_OPTION_WIDTH 188.0f
+#define SAVE_EDITOR_BOTTLE_OPTION_HEIGHT 48.0f
 
 static RecompuiContext editor_context;
 static RecompuiResource root;
@@ -301,7 +304,7 @@ static const s32 s_bottle_contents[SAVE_EDITOR_BOTTLE_CONTENT_COUNT] = {
 };
 
 static const char* s_bottle_content_names[SAVE_EDITOR_BOTTLE_CONTENT_COUNT] = {
-    "None", "Empty", "Red Potion", "Green Potion", "Blue Potion", "Chateau",
+    "No Bottle", "Empty", "Red Potion", "Green Potion", "Blue Potion", "Chateau",
     "Spring Water", "Hot Spring Water", "Milk", "Half Milk", "Fairy", "Fish",
     "Bugs", "Poe", "Big Poe", "Zora Egg", "Deku Princess", "Gold Dust",
     "Mushroom", "Seahorse", "Blue Fire", "Hylian Loach"
@@ -840,8 +843,8 @@ static RecompuiResource add_page(void) {
     recompui_set_display(page, DISPLAY_FLEX);
     recompui_set_flex_direction(page, FLEX_DIRECTION_COLUMN);
     recompui_set_width(page, 100.0f, UNIT_PERCENT);
-    recompui_set_height(page, 520.0f, UNIT_DP);
-    recompui_set_min_height(page, 520.0f, UNIT_DP);
+    recompui_set_height(page, SAVE_EDITOR_PAGE_HEIGHT, UNIT_DP);
+    recompui_set_min_height(page, SAVE_EDITOR_PAGE_HEIGHT, UNIT_DP);
     recompui_set_overflow_y(page, OVERFLOW_AUTO);
     recompui_set_gap(page, 8.0f, UNIT_DP);
     recompui_set_flex_shrink(page, 0.0f);
@@ -892,6 +895,16 @@ static RecompuiResource add_page_button_row(void) {
     recompui_set_min_height(row, 72.0f, UNIT_DP);
     recompui_set_flex_shrink(row, 0.0f);
     return row;
+}
+
+static void style_bottle_option_button(RecompuiResource button) {
+    recompui_set_width(button, SAVE_EDITOR_BOTTLE_OPTION_WIDTH, UNIT_DP);
+    recompui_set_min_width(button, SAVE_EDITOR_BOTTLE_OPTION_WIDTH, UNIT_DP);
+    recompui_set_height(button, SAVE_EDITOR_BOTTLE_OPTION_HEIGHT, UNIT_DP);
+    recompui_set_min_height(button, SAVE_EDITOR_BOTTLE_OPTION_HEIGHT, UNIT_DP);
+    recompui_set_font_size(button, 24.0f, UNIT_DP);
+    recompui_set_line_height(button, 25.0f, UNIT_DP);
+    recompui_set_flex_shrink(button, 0.0f);
 }
 
 static void editor_button_pressed(RecompuiResource resource, const RecompuiEventData* data, void* userdata) {
@@ -1116,13 +1129,13 @@ void save_editor_on_init(void) {
         bottle_pages[i] = add_child_page(page_equipment);
         content_parent = bottle_pages[i];
         bottle_content_labels[i] =
-            recompui_create_label(editor_context, content_parent, "Current: None", LABELSTYLE_SMALL);
+            recompui_create_label(editor_context, content_parent, "Current: No Bottle", LABELSTYLE_SMALL);
         recompui_set_min_height(bottle_content_labels[i], 42.0f, UNIT_DP);
         recompui_set_flex_shrink(bottle_content_labels[i], 0.0f);
 
         for (s32 row_index = 0; row_index < SAVE_EDITOR_BOTTLE_CONTENT_COUNT; row_index += 4) {
             RecompuiResource row = add_page_button_row();
-            recompui_set_min_height(row, 56.0f, UNIT_DP);
+            recompui_set_min_height(row, 50.0f, UNIT_DP);
             for (s32 column = 0; column < 4; column++) {
                 s32 content_index = row_index + column;
                 if (content_index >= SAVE_EDITOR_BOTTLE_CONTENT_COUNT) {
@@ -1130,7 +1143,7 @@ void save_editor_on_init(void) {
                 }
                 bottle_content_buttons[i][content_index] =
                     recompui_create_button(editor_context, row, s_bottle_content_names[content_index], BUTTONSTYLE_SECONDARY);
-                recompui_set_width(bottle_content_buttons[i][content_index], 230.0f, UNIT_DP);
+                style_bottle_option_button(bottle_content_buttons[i][content_index]);
                 recompui_register_callback(bottle_content_buttons[i][content_index], editor_button_pressed, NULL);
             }
         }
