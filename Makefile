@@ -1,5 +1,4 @@
 BUILD_DIR := build
-
 # Allow the user to specify the compiler and linker on macOS
 # as Apple Clang does not support MIPS architecture
 ifeq ($(OS),Windows_NT)
@@ -61,6 +60,3 @@ endif
 -include $(ALL_DEPS)
 
 .PHONY: clean all
-
-# Print target for debugging
-print-% : ; $(info $* is a $(flavor $*) variable set to [$($*)]) @true

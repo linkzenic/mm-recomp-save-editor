@@ -6,10 +6,10 @@ The editor opens in-game and writes directly to the active save context. It is m
 
 ## Features
 
-- Edit name, day, time, time speed, Tatl, intro-complete state, and owl-save state.
+- Edit name, Bombers code, day, time, time speed, Tatl, intro-complete state, and owl-save state.
 - Adjust wallet, held rupees, bank rupees, hearts, health, magic, double defense, Great Spin, and Chateau Romani.
-- Set sword, shield, quiver, bomb bag, Deku Stick and Deku Nut upgrades, ammo counts, powder keg, major inventory items, and all masks.
-- Toggle Bombers Notebook, remains, songs, skull tokens, dungeon maps, compasses, boss keys, small keys, and stray fairies.
+- Set sword, shield, quiver, bomb bag, Deku Stick and Deku Nut upgrades, ammo counts, powder keg, magic beans count, bottle contents, major inventory items, and all masks.
+- Toggle Tingle maps, Bombers Notebook, remains, songs, skull tokens, dungeon maps, compasses, boss keys, small keys, and stray fairies.
 - Use quick actions for maxing or resetting quest and dungeon progress.
 
 ## Usage

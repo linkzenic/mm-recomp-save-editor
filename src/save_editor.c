@@ -11,8 +11,11 @@
 #define MAX_BANK_RUPEES 5000
 #define SKULL_TOKEN_SWAMP_SHIFT 16
 #define SKULL_TOKEN_MASK 0xFFFF
-#define SAVE_EDITOR_ITEM_TOGGLE_COUNT 13
+#define SAVE_EDITOR_ITEM_TOGGLE_COUNT 12
 #define SAVE_EDITOR_MASK_COUNT 24
+#define SAVE_EDITOR_TINGLE_MAP_COUNT 6
+#define SAVE_EDITOR_BOTTLE_COUNT 6
+#define SAVE_EDITOR_BOTTLE_CONTENT_COUNT 22
 
 static RecompuiContext editor_context;
 static RecompuiResource root;
@@ -33,6 +36,7 @@ static RecompuiResource name_input;
 static RecompuiResource day_slider;
 static RecompuiResource time_slider;
 static RecompuiResource time_speed_slider;
+static RecompuiResource bomber_code_input;
 static RecompuiResource rupees_slider;
 static RecompuiResource bank_slider;
 static RecompuiResource wallet_radio;
@@ -58,6 +62,10 @@ static RecompuiResource bombchus_slider;
 static RecompuiResource sticks_slider;
 static RecompuiResource nuts_slider;
 static RecompuiResource powder_keg_radio;
+static RecompuiResource magic_beans_radio;
+static RecompuiResource magic_beans_count_slider;
+static RecompuiResource tingle_map_radios[SAVE_EDITOR_TINGLE_MAP_COUNT];
+static RecompuiResource bottle_radios[SAVE_EDITOR_BOTTLE_COUNT];
 static RecompuiResource item_radios[SAVE_EDITOR_ITEM_TOGGLE_COUNT];
 static RecompuiResource mask_radios[SAVE_EDITOR_MASK_COUNT];
 static RecompuiResource heart_piece_slider;
@@ -173,12 +181,23 @@ typedef struct {
     s32 item;
 } SaveEditorItemToggle;
 
+typedef struct {
+    const char* label;
+    s32 map;
+    s32 week_event_flag;
+    u16 cloud_mask;
+} SaveEditorTingleMap;
+
+typedef struct {
+    const char* label;
+    s32 slot;
+} SaveEditorBottleSlot;
+
 static const SaveEditorItemToggle s_item_toggles[SAVE_EDITOR_ITEM_TOGGLE_COUNT] = {
     { "Ocarina", ITEM_OCARINA_OF_TIME },
     { "Fire Arrows", ITEM_ARROW_FIRE },
     { "Ice Arrows", ITEM_ARROW_ICE },
     { "Light Arrows", ITEM_ARROW_LIGHT },
-    { "Magic Beans", ITEM_MAGIC_BEANS },
     { "Pictograph Box", ITEM_PICTOGRAPH_BOX },
     { "Lens of Truth", ITEM_LENS_OF_TRUTH },
     { "Hookshot", ITEM_HOOKSHOT },
@@ -214,6 +233,49 @@ static const SaveEditorItemToggle s_mask_toggles[SAVE_EDITOR_MASK_COUNT] = {
     { "Blast Mask", ITEM_MASK_BLAST },
     { "Mask of Scents", ITEM_MASK_SCENTS },
     { "Giant's Mask", ITEM_MASK_GIANT },
+};
+
+static const SaveEditorTingleMap s_tingle_maps[SAVE_EDITOR_TINGLE_MAP_COUNT] = {
+    { "Clock Town", TINGLE_MAP_CLOCK_TOWN, WEEKEVENTREG_TINGLE_MAP_BOUGHT_CLOCK_TOWN, 0x0003 },
+    { "Woodfall", TINGLE_MAP_WOODFALL, WEEKEVENTREG_TINGLE_MAP_BOUGHT_WOODFALL, 0x001C },
+    { "Snowhead", TINGLE_MAP_SNOWHEAD, WEEKEVENTREG_TINGLE_MAP_BOUGHT_SNOWHEAD, 0x00E0 },
+    { "Romani Ranch", TINGLE_MAP_ROMANI_RANCH, WEEKEVENTREG_TINGLE_MAP_BOUGHT_ROMANI_RANCH, 0x0100 },
+    { "Great Bay", TINGLE_MAP_GREAT_BAY, WEEKEVENTREG_TINGLE_MAP_BOUGHT_GREAT_BAY, 0x1E00 },
+    { "Stone Tower", TINGLE_MAP_STONE_TOWER, WEEKEVENTREG_TINGLE_MAP_BOUGHT_STONE_TOWER, 0x6000 },
+};
+
+static const SaveEditorBottleSlot s_bottle_slots[SAVE_EDITOR_BOTTLE_COUNT] = {
+    { "Bottle 1", SLOT_BOTTLE_1 },
+    { "Bottle 2", SLOT_BOTTLE_2 },
+    { "Bottle 3", SLOT_BOTTLE_3 },
+    { "Bottle 4", SLOT_BOTTLE_4 },
+    { "Bottle 5", SLOT_BOTTLE_5 },
+    { "Bottle 6", SLOT_BOTTLE_6 },
+};
+
+static const s32 s_bottle_contents[SAVE_EDITOR_BOTTLE_CONTENT_COUNT] = {
+    ITEM_NONE,
+    ITEM_BOTTLE,
+    ITEM_POTION_RED,
+    ITEM_POTION_GREEN,
+    ITEM_POTION_BLUE,
+    ITEM_CHATEAU,
+    ITEM_SPRING_WATER,
+    ITEM_HOT_SPRING_WATER,
+    ITEM_MILK_BOTTLE,
+    ITEM_MILK_HALF,
+    ITEM_FAIRY,
+    ITEM_FISH,
+    ITEM_BUG,
+    ITEM_POE,
+    ITEM_BIG_POE,
+    ITEM_ZORA_EGG,
+    ITEM_DEKU_PRINCESS,
+    ITEM_GOLD_DUST,
+    ITEM_MUSHROOM,
+    ITEM_SEAHORSE,
+    ITEM_BLUE_FIRE,
+    ITEM_HYLIAN_LOACH,
 };
 
 static void set_active_page(s32 page) {
@@ -273,6 +335,26 @@ static s32 clamp_s32(s32 value, s32 min, s32 max) {
     return value;
 }
 
+static s32 display_day_to_save_day(s32 day) {
+    return clamp_s32(day, 1, 4) - 1;
+}
+
+static s32 save_day_to_display_day(s32 day) {
+    return clamp_s32(day + 1, 1, 4);
+}
+
+static s32 current_magic_level(void) {
+    if (gSaveContext.save.saveInfo.playerData.isDoubleMagicAcquired ||
+        (gSaveContext.save.saveInfo.playerData.magicLevel >= 2)) {
+        return 2;
+    }
+    if (gSaveContext.save.saveInfo.playerData.isMagicAcquired ||
+        (gSaveContext.save.saveInfo.playerData.magicLevel >= 1)) {
+        return 1;
+    }
+    return 0;
+}
+
 static void set_quest_flag(s32 quest, bool enabled);
 static void set_week_flag(s32 flag, bool enabled);
 static void give_item_with_ammo(s32 item, s32 ammo);
@@ -312,7 +394,7 @@ static void apply_ui_item(RecompuiResource radio, s32 item) {
 static void apply_live_day_time(s32 day, s32 time, s32 time_speed_offset) {
     u8 event_inf_bits;
 
-    gSaveContext.save.day = clamp_s32(day, 1, 4);
+    gSaveContext.save.day = display_day_to_save_day(day);
     gSaveContext.save.eventDayCount = gSaveContext.save.day;
     gSaveContext.save.time = clamp_s32(time, 0, 0xFFFF);
     gSaveContext.save.timeSpeedOffset = clamp_s32(time_speed_offset, -2, 18);
@@ -370,6 +452,51 @@ static void set_skull_tokens(u32 swamp, u32 ocean) {
         ((swamp & SKULL_TOKEN_MASK) << SKULL_TOKEN_SWAMP_SHIFT) | (ocean & SKULL_TOKEN_MASK);
 }
 
+static s32 bottle_content_index(s32 item) {
+    for (s32 i = 0; i < ARRAY_COUNT(s_bottle_contents); i++) {
+        if (s_bottle_contents[i] == item) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+static s32 bottle_content_from_index(s32 index) {
+    return s_bottle_contents[clamp_s32(index, 0, ARRAY_COUNT(s_bottle_contents) - 1)];
+}
+
+static void set_tingle_map(const SaveEditorTingleMap* map, bool enabled) {
+    if (enabled) {
+        Inventory_SetWorldMapCloudVisibility(map->map);
+        SET_WEEKEVENTREG(map->week_event_flag);
+    } else {
+        gSaveContext.save.saveInfo.worldMapCloudVisibility &= (u32)~map->cloud_mask;
+        CLEAR_WEEKEVENTREG(map->week_event_flag);
+    }
+}
+
+static void get_bomber_code(char* text) {
+    for (s32 i = 0; i < 5; i++) {
+        text[i] = (char)('0' + clamp_s32(gSaveContext.save.saveInfo.bomberCode[i], 1, 5));
+    }
+    text[5] = '\0';
+}
+
+static bool parse_bomber_code(const char* text, s8 code[5]) {
+    if (text == NULL) {
+        return false;
+    }
+
+    for (s32 i = 0; i < 5; i++) {
+        if (text[i] < '1' || text[i] > '5') {
+            return false;
+        }
+        code[i] = (s8)(text[i] - '0');
+    }
+
+    return text[5] == '\0';
+}
+
 static void set_upgrade_value(s32 upgrade, u32 value) {
     gSaveContext.save.saveInfo.inventory.upgrades =
         (GET_SAVE_INVENTORY_UPGRADES & gUpgradeNegMasks[upgrade]) | (value << gUpgradeShifts[upgrade]);
@@ -411,9 +538,10 @@ static void give_item_with_ammo(s32 item, s32 ammo) {
 
 static void clamp_live_save(void) {
     s32 max_rupees = wallet_cap();
+    s32 magic_level;
 
-    gSaveContext.save.day = clamp_s32(gSaveContext.save.day, 1, 4);
-    gSaveContext.save.eventDayCount = clamp_s32(gSaveContext.save.eventDayCount, 1, 4);
+    gSaveContext.save.day = clamp_s32(gSaveContext.save.day, 0, 3);
+    gSaveContext.save.eventDayCount = clamp_s32(gSaveContext.save.eventDayCount, 0, 3);
     gSaveContext.save.timeSpeedOffset = clamp_s32(gSaveContext.save.timeSpeedOffset, -2, 18);
     gSaveContext.save.saveInfo.playerData.healthCapacity =
         clamp_s32(gSaveContext.save.saveInfo.playerData.healthCapacity, MIN_HEARTS * 0x10, MAX_HEARTS * 0x10);
@@ -421,14 +549,14 @@ static void clamp_live_save(void) {
         clamp_s32(gSaveContext.save.saveInfo.playerData.health, 0, gSaveContext.save.saveInfo.playerData.healthCapacity);
     gSaveContext.save.saveInfo.playerData.rupees =
         clamp_s32(gSaveContext.save.saveInfo.playerData.rupees, 0, max_rupees);
-    gSaveContext.save.saveInfo.playerData.magicLevel =
-        clamp_s32(gSaveContext.save.saveInfo.playerData.magicLevel, 0, 2);
-    gSaveContext.magicCapacity = clamp_s32(gSaveContext.magicCapacity, 0, SAVE_EDITOR_MAGIC_DOUBLE_METER);
+    magic_level = current_magic_level();
+    gSaveContext.save.saveInfo.playerData.magicLevel = magic_level;
+    gSaveContext.magicCapacity = magic_level * SAVE_EDITOR_MAGIC_SINGLE_METER;
     gSaveContext.save.saveInfo.playerData.magic =
         clamp_s32(gSaveContext.save.saveInfo.playerData.magic, 0, gSaveContext.magicCapacity);
 }
 
-static bool apply_configure_basics(bool require_auto_enable_and_target, const char* source) {
+static bool apply_configure_basics(bool require_auto_enable_and_target) {
     char* name;
     s32 target_file;
     u32 day;
@@ -473,17 +601,19 @@ static bool apply_configure_basics(bool require_auto_enable_and_target, const ch
 
     clamp_live_save();
     gSaveContext.save.saveInfo.checksum = Sram_CalcChecksum(&gSaveContext.save, sizeof(Save));
-    recomp_printf("Save Editor: applied Configure basics from %s.\n", source);
     return true;
 }
 
 static void sync_editor_from_save(void) {
     char name[9];
+    char bomber_code[6];
 
     clamp_live_save();
     get_player_name(name);
+    get_bomber_code(bomber_code);
     recompui_set_input_text(name_input, name);
-    recompui_set_input_value_u32(day_slider, gSaveContext.save.day);
+    recompui_set_input_text(bomber_code_input, bomber_code);
+    recompui_set_input_value_u32(day_slider, save_day_to_display_day(gSaveContext.save.day));
     recompui_set_input_value_u32(time_slider, gSaveContext.save.time);
     recompui_set_input_value_float(time_speed_slider, (float)gSaveContext.save.timeSpeedOffset);
     recompui_set_input_value_u32(wallet_radio, GET_CUR_UPG_VALUE(UPG_WALLET));
@@ -492,7 +622,7 @@ static void sync_editor_from_save(void) {
     recompui_set_input_value_u32(hearts_slider, gSaveContext.save.saveInfo.playerData.healthCapacity / 0x10);
     recompui_set_input_value_u32(health_slider, gSaveContext.save.saveInfo.playerData.health);
     recompui_set_input_value_u32(double_defense_radio, gSaveContext.save.saveInfo.playerData.doubleDefense ? 1 : 0);
-    recompui_set_input_value_u32(magic_level_radio, gSaveContext.save.saveInfo.playerData.magicLevel);
+    recompui_set_input_value_u32(magic_level_radio, current_magic_level());
     recompui_set_input_value_u32(magic_slider, gSaveContext.save.saveInfo.playerData.magic);
     recompui_set_input_value_u32(spin_attack_radio, CHECK_WEEKEVENTREG(WEEKEVENTREG_RECEIVED_GREAT_SPIN_ATTACK) ? 1 : 0);
     recompui_set_input_value_u32(chateau_radio, CHECK_WEEKEVENTREG(WEEKEVENTREG_DRANK_CHATEAU_ROMANI) ? 1 : 0);
@@ -513,6 +643,15 @@ static void sync_editor_from_save(void) {
     recompui_set_input_value_u32(sticks_slider, AMMO(ITEM_DEKU_STICK));
     recompui_set_input_value_u32(nuts_slider, AMMO(ITEM_DEKU_NUT));
     recompui_set_input_value_u32(powder_keg_radio, GET_INV_CONTENT(ITEM_POWDER_KEG) == ITEM_POWDER_KEG ? 1 : 0);
+    recompui_set_input_value_u32(magic_beans_radio, GET_INV_CONTENT(ITEM_MAGIC_BEANS) == ITEM_MAGIC_BEANS ? 1 : 0);
+    recompui_set_input_value_u32(magic_beans_count_slider, AMMO(ITEM_MAGIC_BEANS));
+    for (s32 i = 0; i < ARRAY_COUNT(s_tingle_maps); i++) {
+        recompui_set_input_value_u32(tingle_map_radios[i], CHECK_WEEKEVENTREG(s_tingle_maps[i].week_event_flag) ? 1 : 0);
+    }
+    for (s32 i = 0; i < ARRAY_COUNT(s_bottle_slots); i++) {
+        s32 item = gSaveContext.save.saveInfo.inventory.items[s_bottle_slots[i].slot];
+        recompui_set_input_value_u32(bottle_radios[i], bottle_content_index(item));
+    }
     for (s32 i = 0; i < ARRAY_COUNT(s_item_toggles); i++) {
         recompui_set_input_value_u32(item_radios[i], GET_INV_CONTENT(s_item_toggles[i].item) == s_item_toggles[i].item ? 1 : 0);
     }
@@ -548,6 +687,8 @@ static void sync_editor_from_save_closed_context(void) {
 
 static void apply_editor_to_save(void) {
     char* name = recompui_get_input_text(name_input);
+    char* bomber_code_text = recompui_get_input_text(bomber_code_input);
+    s8 bomber_code[5];
     s32 hearts = recompui_get_input_value_u32(hearts_slider);
     s32 magic_level = recompui_get_input_value_u32(magic_level_radio);
     s32 i;
@@ -555,6 +696,15 @@ static void apply_editor_to_save(void) {
     if (name != NULL) {
         set_player_name(name);
         recomp_free(name);
+    }
+
+    if (parse_bomber_code(bomber_code_text, bomber_code)) {
+        for (i = 0; i < ARRAY_COUNT(bomber_code); i++) {
+            gSaveContext.save.saveInfo.bomberCode[i] = bomber_code[i];
+        }
+    }
+    if (bomber_code_text != NULL) {
+        recomp_free(bomber_code_text);
     }
 
     apply_live_day_time(recompui_get_input_value_u32(day_slider), recompui_get_input_value_u32(time_slider),
@@ -602,6 +752,19 @@ static void apply_editor_to_save(void) {
         give_item_with_ammo(ITEM_DEKU_NUT, recompui_get_input_value_u32(nuts_slider));
     }
     apply_ui_item(powder_keg_radio, ITEM_POWDER_KEG);
+    if (recompui_get_input_value_u32(magic_beans_radio) != 0) {
+        give_item_with_ammo(ITEM_MAGIC_BEANS, clamp_s32(recompui_get_input_value_u32(magic_beans_count_slider), 1, 20));
+    } else {
+        INV_CONTENT(ITEM_MAGIC_BEANS) = ITEM_NONE;
+        AMMO(ITEM_MAGIC_BEANS) = 0;
+    }
+    for (i = 0; i < ARRAY_COUNT(s_tingle_maps); i++) {
+        set_tingle_map(&s_tingle_maps[i], recompui_get_input_value_u32(tingle_map_radios[i]) != 0);
+    }
+    for (i = 0; i < ARRAY_COUNT(s_bottle_slots); i++) {
+        s32 item_index = recompui_get_input_value_u32(bottle_radios[i]);
+        gSaveContext.save.saveInfo.inventory.items[s_bottle_slots[i].slot] = bottle_content_from_index(item_index);
+    }
     for (i = 0; i < ARRAY_COUNT(s_item_toggles); i++) {
         apply_ui_item(item_radios[i], s_item_toggles[i].item);
     }
@@ -634,7 +797,6 @@ static void apply_editor_to_save(void) {
     clamp_live_save();
     gSaveContext.save.saveInfo.checksum = Sram_CalcChecksum(&gSaveContext.save, sizeof(Save));
     sync_editor_from_save();
-    recomp_printf("Save Editor: applied live editor values.\n");
 }
 
 static void set_all_quest_items(bool enabled) {
@@ -644,6 +806,9 @@ static void set_all_quest_items(bool enabled) {
     }
     for (s32 i = 0; i < ARRAY_COUNT(s_songs); i++) {
         set_quest_flag(s_songs[i], enabled);
+    }
+    for (s32 i = 0; i < ARRAY_COUNT(s_tingle_maps); i++) {
+        set_tingle_map(&s_tingle_maps[i], enabled);
     }
     set_heart_piece_count(enabled ? 3 : 0);
     set_skull_tokens(enabled ? 30 : 0, enabled ? 30 : 0);
@@ -775,6 +940,7 @@ void save_editor_on_init(void) {
     RecompuiColor panel_color = { 8, 7, 13, 230 };
     const char* bool_options[] = { "No", "Yes" };
     const char* magic_options[] = { "None", "Single", "Double" };
+    const char* spin_options[] = { "Level 1", "Level 2" };
     const char* wallet_options[] = { "Child", "Adult", "Giant" };
     const char* sword_options[] = { "None", "Kokiri", "Razor", "Gilded" };
     const char* shield_options[] = { "None", "Hero", "Mirror" };
@@ -788,6 +954,12 @@ void save_editor_on_init(void) {
         "Time", "Healing", "Epona", "Soaring", "Storms", "Sun"
     };
     const char* dungeon_names[] = { "Woodfall", "Snowhead", "Great Bay", "Stone Tower" };
+    const char* bottle_content_names[] = {
+        "None", "Empty", "Red Potion", "Green Potion", "Blue Potion", "Chateau",
+        "Spring Water", "Hot Spring Water", "Milk", "Half Milk", "Fairy", "Fish",
+        "Bugs", "Poe", "Big Poe", "Zora Egg", "Deku Princess", "Gold Dust",
+        "Mushroom", "Seahorse", "Blue Fire", "Hylian Loach"
+    };
 
     editor_context = recompui_create_context();
     recompui_open_context(editor_context);
@@ -864,13 +1036,22 @@ void save_editor_on_init(void) {
     day_slider = add_labeled_slider("Day", 1.0f, 4.0f, 1.0f, 1.0f);
     time_slider = add_labeled_slider("Time", 0.0f, 65535.0f, 1.0f, 0.0f);
     time_speed_slider = add_labeled_slider("Time Speed Offset", -2.0f, 18.0f, 1.0f, 0.0f);
+    {
+        RecompuiResource row = add_row();
+        RecompuiResource label = recompui_create_label(editor_context, row, "Bombers Code", LABELSTYLE_SMALL);
+        recompui_set_width(label, 220.0f, UNIT_DP);
+        recompui_set_min_width(label, 220.0f, UNIT_DP);
+        recompui_set_flex_shrink(label, 0.0f);
+        bomber_code_input = recompui_create_textinput(editor_context, row);
+        recompui_set_width(bomber_code_input, 180.0f, UNIT_DP);
+    }
     tatl_radio = add_labeled_radio("Has Tatl", bool_options, ARRAY_COUNT(bool_options));
     intro_radio = add_labeled_radio("Intro Complete", bool_options, ARRAY_COUNT(bool_options));
     owl_save_radio = add_labeled_radio("Owl Save", bool_options, ARRAY_COUNT(bool_options));
 
     add_section_label("Currency");
     wallet_radio = add_labeled_radio("Wallet", wallet_options, ARRAY_COUNT(wallet_options));
-    rupees_slider = add_labeled_slider("Rupees", 0.0f, 999.0f, 1.0f, 0.0f);
+    rupees_slider = add_labeled_slider("Rupees", 0.0f, 500.0f, 1.0f, 0.0f);
     bank_slider = add_labeled_slider("Bank Rupees", 0.0f, MAX_BANK_RUPEES, 1.0f, 0.0f);
 
     content_parent = page_stats;
@@ -881,7 +1062,7 @@ void save_editor_on_init(void) {
     double_defense_radio = add_labeled_radio("Double Defense", bool_options, ARRAY_COUNT(bool_options));
     magic_level_radio = add_labeled_radio("Magic Level", magic_options, ARRAY_COUNT(magic_options));
     magic_slider = add_labeled_slider("Magic", 0.0f, SAVE_EDITOR_MAGIC_DOUBLE_METER, 1.0f, 0.0f);
-    spin_attack_radio = add_labeled_radio("Great Spin", bool_options, ARRAY_COUNT(bool_options));
+    spin_attack_radio = add_labeled_radio("Spin Attack", spin_options, ARRAY_COUNT(spin_options));
     chateau_radio = add_labeled_radio("Chateau Romani", bool_options, ARRAY_COUNT(bool_options));
 
     content_parent = page_equipment;
@@ -898,6 +1079,17 @@ void save_editor_on_init(void) {
     nut_upgrade_radio = add_labeled_radio("Nut Upgrade", nut_options, ARRAY_COUNT(nut_options));
     nuts_slider = add_labeled_slider("Deku Nuts", 0.0f, 40.0f, 1.0f, 0.0f);
     powder_keg_radio = add_labeled_radio("Powder Keg", bool_options, ARRAY_COUNT(bool_options));
+    magic_beans_radio = add_labeled_radio("Magic Beans", bool_options, ARRAY_COUNT(bool_options));
+    magic_beans_count_slider = add_labeled_slider("Bean Count", 0.0f, 20.0f, 1.0f, 0.0f);
+    add_section_label("Tingle Maps");
+    for (s32 i = 0; i < ARRAY_COUNT(s_tingle_maps); i++) {
+        tingle_map_radios[i] = add_labeled_radio(s_tingle_maps[i].label, bool_options, ARRAY_COUNT(bool_options));
+    }
+    add_section_label("Bottles");
+    for (s32 i = 0; i < ARRAY_COUNT(s_bottle_slots); i++) {
+        bottle_radios[i] = add_labeled_radio(s_bottle_slots[i].label, bottle_content_names, ARRAY_COUNT(bottle_content_names));
+    }
+    add_section_label("Items");
     for (s32 i = 0; i < ARRAY_COUNT(s_item_toggles); i++) {
         item_radios[i] = add_labeled_radio(s_item_toggles[i].label, bool_options, ARRAY_COUNT(bool_options));
     }
@@ -984,7 +1176,7 @@ void save_editor_on_play_update(PlayState* play) {
     if (recomp_get_config_u32("configure_auto_apply") != 0) {
         current_configure_hash = configure_basics_config_hash();
         if ((configure_basics_hash != current_configure_hash) &&
-            apply_configure_basics(true, "live Configure menu change")) {
+            apply_configure_basics(true)) {
             configure_basics_hash = current_configure_hash;
         }
     } else {
@@ -994,7 +1186,7 @@ void save_editor_on_play_update(PlayState* play) {
 
 RECOMP_HOOK_RETURN("Sram_OpenSave")
 void save_editor_on_sram_open_save(void) {
-    if (apply_configure_basics(true, "auto file load")) {
+    if (apply_configure_basics(true)) {
         configure_basics_hash = configure_basics_config_hash();
     }
 }
