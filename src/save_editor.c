@@ -17,8 +17,9 @@
 #define SAVE_EDITOR_BOTTLE_COUNT 6
 #define SAVE_EDITOR_BOTTLE_CONTENT_COUNT 22
 #define SAVE_EDITOR_PAGE_HEIGHT 610.0f
-#define SAVE_EDITOR_BOTTLE_OPTION_WIDTH 188.0f
-#define SAVE_EDITOR_BOTTLE_OPTION_HEIGHT 48.0f
+#define SAVE_EDITOR_BOTTLE_OPTION_COLUMNS 3
+#define SAVE_EDITOR_BOTTLE_OPTION_WIDTH 250.0f
+#define SAVE_EDITOR_BOTTLE_OPTION_HEIGHT 68.0f
 
 static RecompuiContext editor_context;
 static RecompuiResource root;
@@ -306,6 +307,13 @@ static const s32 s_bottle_contents[SAVE_EDITOR_BOTTLE_CONTENT_COUNT] = {
 static const char* s_bottle_content_names[SAVE_EDITOR_BOTTLE_CONTENT_COUNT] = {
     "No Bottle", "Empty", "Red Potion", "Green Potion", "Blue Potion", "Chateau",
     "Spring Water", "Hot Spring Water", "Milk", "Half Milk", "Fairy", "Fish",
+    "Bugs", "Poe", "Big Poe", "Zora Egg", "Deku Princess", "Gold Dust",
+    "Mushroom", "Seahorse", "Blue Fire", "Hylian Loach"
+};
+
+static const char* s_bottle_content_button_labels[SAVE_EDITOR_BOTTLE_CONTENT_COUNT] = {
+    "No Bottle", "Empty", "Red Potion", "Green Potion", "Blue Potion", "Chateau",
+    "Spring Water", "Hot Water", "Milk", "Half Milk", "Fairy", "Fish",
     "Bugs", "Poe", "Big Poe", "Zora Egg", "Deku Princess", "Gold Dust",
     "Mushroom", "Seahorse", "Blue Fire", "Hylian Loach"
 };
@@ -1133,16 +1141,16 @@ void save_editor_on_init(void) {
         recompui_set_min_height(bottle_content_labels[i], 42.0f, UNIT_DP);
         recompui_set_flex_shrink(bottle_content_labels[i], 0.0f);
 
-        for (s32 row_index = 0; row_index < SAVE_EDITOR_BOTTLE_CONTENT_COUNT; row_index += 4) {
+        for (s32 row_index = 0; row_index < SAVE_EDITOR_BOTTLE_CONTENT_COUNT; row_index += SAVE_EDITOR_BOTTLE_OPTION_COLUMNS) {
             RecompuiResource row = add_page_button_row();
-            recompui_set_min_height(row, 50.0f, UNIT_DP);
-            for (s32 column = 0; column < 4; column++) {
+            recompui_set_min_height(row, SAVE_EDITOR_BOTTLE_OPTION_HEIGHT + 8.0f, UNIT_DP);
+            for (s32 column = 0; column < SAVE_EDITOR_BOTTLE_OPTION_COLUMNS; column++) {
                 s32 content_index = row_index + column;
                 if (content_index >= SAVE_EDITOR_BOTTLE_CONTENT_COUNT) {
                     break;
                 }
                 bottle_content_buttons[i][content_index] =
-                    recompui_create_button(editor_context, row, s_bottle_content_names[content_index], BUTTONSTYLE_SECONDARY);
+                    recompui_create_button(editor_context, row, s_bottle_content_button_labels[content_index], BUTTONSTYLE_SECONDARY);
                 style_bottle_option_button(bottle_content_buttons[i][content_index]);
                 recompui_register_callback(bottle_content_buttons[i][content_index], editor_button_pressed, NULL);
             }

@@ -1,6 +1,6 @@
 [manifest]
 id = "mm_recomp_save_editor"
-version = "1.1.3"
+version = "1.1.4"
 display_name = "Save Editor"
 description =  """
 A save editor for Zelda 64: Recompiled with in-game editing for player status, equipment, inventory, quest flags, and dungeon progress."""
