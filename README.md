@@ -28,8 +28,6 @@ L + C-Up
 
 The hotkey can be changed or disabled from `Mods > Save Editor > Configure`.
 
-The Configure menu also includes a small setup section for applying name, day, Tatl, intro-complete, and owl-save values when a chosen save file opens.
-
 ## Notes
 
 - Edits are applied to the currently loaded save. Save normally in-game if you want the changes persisted.

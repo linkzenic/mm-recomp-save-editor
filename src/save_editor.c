@@ -88,7 +88,6 @@ static RecompuiResource close_button;
 
 static bool editor_shown = false;
 static s32 active_page = 0;
-static u32 configure_basics_hash = 0;
 static PlayState* current_play_state = NULL;
 
 static bool string_equals(const char* a, const char* b) {
@@ -132,14 +131,18 @@ static u16 editor_hotkey_combo(void) {
 
 static bool editor_hotkey_pressed(Input* input, u16 hotkey) {
     static bool hotkey_down_last_frame = false;
+    u16 buttons;
+    bool hotkey_down;
+    bool pressed;
 
     if (hotkey == 0) {
         hotkey_down_last_frame = false;
         return false;
     }
 
-    bool hotkey_down = CHECK_BTN_ALL(input->cur.button, hotkey);
-    bool pressed = hotkey_down && !hotkey_down_last_frame;
+    buttons = input->cur.button | input->press.button;
+    hotkey_down = CHECK_BTN_ALL(buttons, hotkey);
+    pressed = hotkey_down && !hotkey_down_last_frame;
 
     hotkey_down_last_frame = hotkey_down;
     return pressed;
@@ -361,32 +364,6 @@ static void give_item_with_ammo(s32 item, s32 ammo);
 static void set_all_quest_items(bool enabled);
 static void set_all_dungeon_items(bool enabled);
 
-static u32 hash_config_value(u32 hash, u32 value) {
-    hash ^= value;
-    hash *= 16777619u;
-    return hash;
-}
-
-static u32 configure_basics_config_hash(void) {
-    u32 hash = 2166136261u;
-    char* name = recomp_get_config_string("configure_name");
-
-    hash = hash_config_value(hash, recomp_get_config_u32("configure_target_file"));
-    hash = hash_config_value(hash, recomp_get_config_u32("configure_day"));
-    hash = hash_config_value(hash, recomp_get_config_u32("configure_has_tatl"));
-    hash = hash_config_value(hash, recomp_get_config_u32("configure_intro_complete"));
-    hash = hash_config_value(hash, recomp_get_config_u32("configure_owl_save"));
-
-    if (name != NULL) {
-        for (s32 i = 0; name[i] != '\0'; i++) {
-            hash = hash_config_value(hash, (u32)name[i]);
-        }
-        recomp_free_config_string(name);
-    }
-
-    return hash;
-}
-
 static void apply_ui_item(RecompuiResource radio, s32 item) {
     INV_CONTENT(item) = recompui_get_input_value_u32(radio) != 0 ? item : ITEM_NONE;
 }
@@ -554,54 +531,6 @@ static void clamp_live_save(void) {
     gSaveContext.magicCapacity = magic_level * SAVE_EDITOR_MAGIC_SINGLE_METER;
     gSaveContext.save.saveInfo.playerData.magic =
         clamp_s32(gSaveContext.save.saveInfo.playerData.magic, 0, gSaveContext.magicCapacity);
-}
-
-static bool apply_configure_basics(bool require_auto_enable_and_target) {
-    char* name;
-    s32 target_file;
-    u32 day;
-    u32 value;
-
-    if (require_auto_enable_and_target && (recomp_get_config_u32("configure_auto_apply") == 0)) {
-        return false;
-    }
-
-    target_file = recomp_get_config_u32("configure_target_file");
-    if (require_auto_enable_and_target && ((target_file != 0) && (gSaveContext.fileNum != (target_file - 1)))) {
-        return false;
-    }
-
-    name = recomp_get_config_string("configure_name");
-    if (name != NULL) {
-        if (name[0] != '\0') {
-            set_player_name(name);
-        }
-        recomp_free_config_string(name);
-    }
-
-    day = recomp_get_config_u32("configure_day");
-    if (day != 0) {
-        apply_live_day_time(day, gSaveContext.save.time, gSaveContext.save.timeSpeedOffset);
-    }
-
-    value = recomp_get_config_u32("configure_has_tatl");
-    if (value != 0) {
-        gSaveContext.save.hasTatl = value == 2;
-    }
-
-    value = recomp_get_config_u32("configure_intro_complete");
-    if (value != 0) {
-        gSaveContext.save.isFirstCycle = value == 2;
-    }
-
-    value = recomp_get_config_u32("configure_owl_save");
-    if (value != 0) {
-        gSaveContext.save.isOwlSave = value == 2;
-    }
-
-    clamp_live_save();
-    gSaveContext.save.saveInfo.checksum = Sram_CalcChecksum(&gSaveContext.save, sizeof(Save));
-    return true;
 }
 
 static void sync_editor_from_save(void) {
@@ -1158,7 +1087,6 @@ RECOMP_HOOK("Play_UpdateMain")
 void save_editor_on_play_update(PlayState* play) {
     Input* input = CONTROLLER1(&play->state);
     u16 hotkey = editor_hotkey_combo();
-    u32 current_configure_hash;
 
     current_play_state = play;
 
@@ -1171,22 +1099,5 @@ void save_editor_on_play_update(PlayState* play) {
             recompui_hide_context(editor_context);
             editor_shown = false;
         }
-    }
-
-    if (recomp_get_config_u32("configure_auto_apply") != 0) {
-        current_configure_hash = configure_basics_config_hash();
-        if ((configure_basics_hash != current_configure_hash) &&
-            apply_configure_basics(true)) {
-            configure_basics_hash = current_configure_hash;
-        }
-    } else {
-        configure_basics_hash = 0;
-    }
-}
-
-RECOMP_HOOK_RETURN("Sram_OpenSave")
-void save_editor_on_sram_open_save(void) {
-    if (apply_configure_basics(true)) {
-        configure_basics_hash = configure_basics_config_hash();
     }
 }

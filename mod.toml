@@ -1,6 +1,6 @@
 [manifest]
 id = "mm_recomp_save_editor"
-version = "1.1.0"
+version = "1.1.1"
 display_name = "Save Editor"
 description =  """
 A save editor for Zelda 64: Recompiled with in-game editing for player status, equipment, inventory, quest flags, and dungeon progress."""
@@ -14,13 +14,6 @@ native_libraries = []
 
 config_options = [
     { id = "editor_hotkey", name = "Editor Hotkey", description = "Button combo used to open the in-game editor.", type = "Enum", options = [ "L + C-Up", "L + D-Up", "L + R + D-Up", "L + R", "Disabled" ], default = "L + C-Up" },
-    { id = "configure_auto_apply", name = "Apply Setup on Load", description = "Apply the setup values below when the chosen save file opens. Changes made during gameplay are applied live.", type = "Enum", options = [ "Off", "On" ], default = "Off" },
-    { id = "configure_target_file", name = "Setup Save File", description = "Choose which save file receives setup values. Next opened file applies to whichever save is loaded next.", type = "Enum", options = [ "Next opened file", "File 1", "File 2", "File 3" ], default = "Next opened file" },
-    { id = "configure_name", name = "Setup Name", description = "Player name to apply. Leave blank to keep the current name.", type = "String", default = "" },
-    { id = "configure_day", name = "Setup Day", description = "Day to apply. Preserve keeps the current day.", type = "Enum", options = [ "Preserve", "Day 1", "Day 2", "Day 3", "Final Day" ], default = "Preserve" },
-    { id = "configure_has_tatl", name = "Setup Tatl", description = "Set whether the save has Tatl.", type = "Enum", options = [ "Preserve", "No", "Yes" ], default = "Preserve" },
-    { id = "configure_intro_complete", name = "Setup Intro Complete", description = "Set the intro-complete flag.", type = "Enum", options = [ "Preserve", "No", "Yes" ], default = "Preserve" },
-    { id = "configure_owl_save", name = "Setup Owl Save", description = "Set the owl-save flag.", type = "Enum", options = [ "Preserve", "No", "Yes" ], default = "Preserve" },
 ]
 
 [inputs]
