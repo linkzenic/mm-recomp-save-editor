@@ -25,13 +25,17 @@ static RecompuiResource content_parent;
 static RecompuiResource page_general;
 static RecompuiResource page_stats;
 static RecompuiResource page_equipment;
+static RecompuiResource page_masks;
 static RecompuiResource page_quest;
 static RecompuiResource page_dungeons;
+static RecompuiResource dungeon_pages[4];
 static RecompuiResource general_page_button;
 static RecompuiResource stats_page_button;
 static RecompuiResource equipment_page_button;
+static RecompuiResource masks_page_button;
 static RecompuiResource quest_page_button;
 static RecompuiResource dungeons_page_button;
+static RecompuiResource dungeon_page_buttons[4];
 static RecompuiResource name_input;
 static RecompuiResource day_slider;
 static RecompuiResource time_slider;
@@ -65,7 +69,8 @@ static RecompuiResource powder_keg_radio;
 static RecompuiResource magic_beans_radio;
 static RecompuiResource magic_beans_count_slider;
 static RecompuiResource tingle_map_radios[SAVE_EDITOR_TINGLE_MAP_COUNT];
-static RecompuiResource bottle_radios[SAVE_EDITOR_BOTTLE_COUNT];
+static RecompuiResource bottle_slot_buttons[SAVE_EDITOR_BOTTLE_COUNT];
+static RecompuiResource bottle_content_radio;
 static RecompuiResource item_radios[SAVE_EDITOR_ITEM_TOGGLE_COUNT];
 static RecompuiResource mask_radios[SAVE_EDITOR_MASK_COUNT];
 static RecompuiResource heart_piece_slider;
@@ -88,7 +93,19 @@ static RecompuiResource close_button;
 
 static bool editor_shown = false;
 static s32 active_page = 0;
+static s32 active_dungeon_page = 0;
+static s32 selected_bottle_slot = 0;
+static s32 editor_bottle_contents[SAVE_EDITOR_BOTTLE_COUNT];
 static PlayState* current_play_state = NULL;
+
+enum {
+    PAGE_GENERAL,
+    PAGE_STATS,
+    PAGE_EQUIPMENT,
+    PAGE_MASKS,
+    PAGE_QUEST,
+    PAGE_DUNGEONS,
+};
 
 static bool string_equals(const char* a, const char* b) {
     if (a == NULL || b == NULL) {
@@ -281,13 +298,24 @@ static const s32 s_bottle_contents[SAVE_EDITOR_BOTTLE_CONTENT_COUNT] = {
     ITEM_HYLIAN_LOACH,
 };
 
+static s32 clamp_s32(s32 value, s32 min, s32 max);
+
 static void set_active_page(s32 page) {
     active_page = page;
-    recompui_set_display(page_general, page == 0 ? DISPLAY_FLEX : DISPLAY_NONE);
-    recompui_set_display(page_stats, page == 1 ? DISPLAY_FLEX : DISPLAY_NONE);
-    recompui_set_display(page_equipment, page == 2 ? DISPLAY_FLEX : DISPLAY_NONE);
-    recompui_set_display(page_quest, page == 3 ? DISPLAY_FLEX : DISPLAY_NONE);
-    recompui_set_display(page_dungeons, page == 4 ? DISPLAY_FLEX : DISPLAY_NONE);
+    recompui_set_display(page_general, page == PAGE_GENERAL ? DISPLAY_FLEX : DISPLAY_NONE);
+    recompui_set_display(page_stats, page == PAGE_STATS ? DISPLAY_FLEX : DISPLAY_NONE);
+    recompui_set_display(page_equipment, page == PAGE_EQUIPMENT ? DISPLAY_FLEX : DISPLAY_NONE);
+    recompui_set_display(page_masks, page == PAGE_MASKS ? DISPLAY_FLEX : DISPLAY_NONE);
+    recompui_set_display(page_quest, page == PAGE_QUEST ? DISPLAY_FLEX : DISPLAY_NONE);
+    recompui_set_display(page_dungeons, page == PAGE_DUNGEONS ? DISPLAY_FLEX : DISPLAY_NONE);
+}
+
+static void set_active_dungeon_page(s32 page) {
+    active_dungeon_page = clamp_s32(page, 0, ARRAY_COUNT(dungeon_pages) - 1);
+
+    for (s32 i = 0; i < ARRAY_COUNT(dungeon_pages); i++) {
+        recompui_set_display(dungeon_pages[i], i == active_dungeon_page ? DISPLAY_FLEX : DISPLAY_NONE);
+    }
 }
 
 static char z2_ascii(int code) {
@@ -344,6 +372,14 @@ static s32 display_day_to_save_day(s32 day) {
 
 static s32 save_day_to_display_day(s32 day) {
     return clamp_s32(day + 1, 1, 4);
+}
+
+static s32 raw_time_to_hour(s32 raw_time) {
+    return ((raw_time & 0xFFFF) * 24) / 0x10000;
+}
+
+static s32 hour_to_raw_time(s32 hour) {
+    return (clamp_s32(hour, 0, 23) * 0x10000) / 24;
 }
 
 static s32 current_magic_level(void) {
@@ -440,6 +476,16 @@ static s32 bottle_content_index(s32 item) {
 
 static s32 bottle_content_from_index(s32 index) {
     return s_bottle_contents[clamp_s32(index, 0, ARRAY_COUNT(s_bottle_contents) - 1)];
+}
+
+static void store_selected_bottle_content(void) {
+    selected_bottle_slot = clamp_s32(selected_bottle_slot, 0, ARRAY_COUNT(s_bottle_slots) - 1);
+    editor_bottle_contents[selected_bottle_slot] = recompui_get_input_value_u32(bottle_content_radio);
+}
+
+static void sync_selected_bottle_content(void) {
+    selected_bottle_slot = clamp_s32(selected_bottle_slot, 0, ARRAY_COUNT(s_bottle_slots) - 1);
+    recompui_set_input_value_u32(bottle_content_radio, editor_bottle_contents[selected_bottle_slot]);
 }
 
 static void set_tingle_map(const SaveEditorTingleMap* map, bool enabled) {
@@ -543,7 +589,7 @@ static void sync_editor_from_save(void) {
     recompui_set_input_text(name_input, name);
     recompui_set_input_text(bomber_code_input, bomber_code);
     recompui_set_input_value_u32(day_slider, save_day_to_display_day(gSaveContext.save.day));
-    recompui_set_input_value_u32(time_slider, gSaveContext.save.time);
+    recompui_set_input_value_u32(time_slider, raw_time_to_hour(gSaveContext.save.time));
     recompui_set_input_value_float(time_speed_slider, (float)gSaveContext.save.timeSpeedOffset);
     recompui_set_input_value_u32(wallet_radio, GET_CUR_UPG_VALUE(UPG_WALLET));
     recompui_set_input_value_u32(rupees_slider, gSaveContext.save.saveInfo.playerData.rupees);
@@ -579,8 +625,9 @@ static void sync_editor_from_save(void) {
     }
     for (s32 i = 0; i < ARRAY_COUNT(s_bottle_slots); i++) {
         s32 item = gSaveContext.save.saveInfo.inventory.items[s_bottle_slots[i].slot];
-        recompui_set_input_value_u32(bottle_radios[i], bottle_content_index(item));
+        editor_bottle_contents[i] = bottle_content_index(item);
     }
+    sync_selected_bottle_content();
     for (s32 i = 0; i < ARRAY_COUNT(s_item_toggles); i++) {
         recompui_set_input_value_u32(item_radios[i], GET_INV_CONTENT(s_item_toggles[i].item) == s_item_toggles[i].item ? 1 : 0);
     }
@@ -636,8 +683,9 @@ static void apply_editor_to_save(void) {
         recomp_free(bomber_code_text);
     }
 
-    apply_live_day_time(recompui_get_input_value_u32(day_slider), recompui_get_input_value_u32(time_slider),
-                        recompui_get_input_value_u32(time_speed_slider));
+    store_selected_bottle_content();
+    apply_live_day_time(recompui_get_input_value_u32(day_slider), hour_to_raw_time(recompui_get_input_value_u32(time_slider)),
+                        (s32)recompui_get_input_value_float(time_speed_slider));
     set_upgrade_value(UPG_WALLET, recompui_get_input_value_u32(wallet_radio));
     gSaveContext.save.saveInfo.playerData.rupees = recompui_get_input_value_u32(rupees_slider);
     HS_SET_BANK_RUPEES(clamp_s32(recompui_get_input_value_u32(bank_slider), 0, MAX_BANK_RUPEES));
@@ -691,8 +739,8 @@ static void apply_editor_to_save(void) {
         set_tingle_map(&s_tingle_maps[i], recompui_get_input_value_u32(tingle_map_radios[i]) != 0);
     }
     for (i = 0; i < ARRAY_COUNT(s_bottle_slots); i++) {
-        s32 item_index = recompui_get_input_value_u32(bottle_radios[i]);
-        gSaveContext.save.saveInfo.inventory.items[s_bottle_slots[i].slot] = bottle_content_from_index(item_index);
+        gSaveContext.save.saveInfo.inventory.items[s_bottle_slots[i].slot] =
+            bottle_content_from_index(editor_bottle_contents[i]);
     }
     for (i = 0; i < ARRAY_COUNT(s_item_toggles); i++) {
         apply_ui_item(item_radios[i], s_item_toggles[i].item);
@@ -787,6 +835,16 @@ static RecompuiResource add_page(void) {
     return page;
 }
 
+static RecompuiResource add_child_page(RecompuiResource parent) {
+    RecompuiResource page = recompui_create_element(editor_context, parent);
+    recompui_set_display(page, DISPLAY_FLEX);
+    recompui_set_flex_direction(page, FLEX_DIRECTION_COLUMN);
+    recompui_set_width(page, 100.0f, UNIT_PERCENT);
+    recompui_set_gap(page, 8.0f, UNIT_DP);
+    recompui_set_flex_shrink(page, 0.0f);
+    return page;
+}
+
 static RecompuiResource add_labeled_slider(const char* label, float min, float max, float step, float initial) {
     RecompuiResource row = add_row();
     RecompuiResource label_res = recompui_create_label(editor_context, row, label, LABELSTYLE_SMALL);
@@ -829,15 +887,17 @@ static void editor_button_pressed(RecompuiResource resource, const RecompuiEvent
     }
 
     if (resource == general_page_button) {
-        set_active_page(0);
+        set_active_page(PAGE_GENERAL);
     } else if (resource == stats_page_button) {
-        set_active_page(1);
+        set_active_page(PAGE_STATS);
     } else if (resource == equipment_page_button) {
-        set_active_page(2);
+        set_active_page(PAGE_EQUIPMENT);
+    } else if (resource == masks_page_button) {
+        set_active_page(PAGE_MASKS);
     } else if (resource == quest_page_button) {
-        set_active_page(3);
+        set_active_page(PAGE_QUEST);
     } else if (resource == dungeons_page_button) {
-        set_active_page(4);
+        set_active_page(PAGE_DUNGEONS);
     } else if (resource == apply_button) {
         apply_editor_to_save();
     } else if (resource == give_quest_button) {
@@ -859,6 +919,21 @@ static void editor_button_pressed(RecompuiResource resource, const RecompuiEvent
     } else if (resource == close_button) {
         recompui_hide_context(editor_context);
         editor_shown = false;
+    } else {
+        for (s32 i = 0; i < ARRAY_COUNT(s_bottle_slots); i++) {
+            if (resource == bottle_slot_buttons[i]) {
+                store_selected_bottle_content();
+                selected_bottle_slot = i;
+                sync_selected_bottle_content();
+                return;
+            }
+        }
+        for (s32 i = 0; i < ARRAY_COUNT(dungeon_page_buttons); i++) {
+            if (resource == dungeon_page_buttons[i]) {
+                set_active_dungeon_page(i);
+                return;
+            }
+        }
     }
 }
 
@@ -936,11 +1011,13 @@ void save_editor_on_init(void) {
         general_page_button = recompui_create_button(editor_context, nav_row, "Main", BUTTONSTYLE_SECONDARY);
         stats_page_button = recompui_create_button(editor_context, nav_row, "Stats", BUTTONSTYLE_SECONDARY);
         equipment_page_button = recompui_create_button(editor_context, nav_row, "Gear", BUTTONSTYLE_SECONDARY);
+        masks_page_button = recompui_create_button(editor_context, nav_row, "Masks", BUTTONSTYLE_SECONDARY);
         quest_page_button = recompui_create_button(editor_context, nav_row, "Quest", BUTTONSTYLE_SECONDARY);
         dungeons_page_button = recompui_create_button(editor_context, nav_row, "Dungeons", BUTTONSTYLE_SECONDARY);
         recompui_register_callback(general_page_button, editor_button_pressed, NULL);
         recompui_register_callback(stats_page_button, editor_button_pressed, NULL);
         recompui_register_callback(equipment_page_button, editor_button_pressed, NULL);
+        recompui_register_callback(masks_page_button, editor_button_pressed, NULL);
         recompui_register_callback(quest_page_button, editor_button_pressed, NULL);
         recompui_register_callback(dungeons_page_button, editor_button_pressed, NULL);
     }
@@ -948,6 +1025,7 @@ void save_editor_on_init(void) {
     page_general = add_page();
     page_stats = add_page();
     page_equipment = add_page();
+    page_masks = add_page();
     page_quest = add_page();
     page_dungeons = add_page();
 
@@ -963,7 +1041,7 @@ void save_editor_on_init(void) {
         recompui_set_width(name_input, 360.0f, UNIT_DP);
     }
     day_slider = add_labeled_slider("Day", 1.0f, 4.0f, 1.0f, 1.0f);
-    time_slider = add_labeled_slider("Time", 0.0f, 65535.0f, 1.0f, 0.0f);
+    time_slider = add_labeled_slider("Time of Day", 0.0f, 23.0f, 1.0f, 6.0f);
     time_speed_slider = add_labeled_slider("Time Speed Offset", -2.0f, 18.0f, 1.0f, 0.0f);
     {
         RecompuiResource row = add_row();
@@ -1010,18 +1088,26 @@ void save_editor_on_init(void) {
     powder_keg_radio = add_labeled_radio("Powder Keg", bool_options, ARRAY_COUNT(bool_options));
     magic_beans_radio = add_labeled_radio("Magic Beans", bool_options, ARRAY_COUNT(bool_options));
     magic_beans_count_slider = add_labeled_slider("Bean Count", 0.0f, 20.0f, 1.0f, 0.0f);
+    add_section_label("Items");
+    for (s32 i = 0; i < ARRAY_COUNT(s_item_toggles); i++) {
+        item_radios[i] = add_labeled_radio(s_item_toggles[i].label, bool_options, ARRAY_COUNT(bool_options));
+    }
     add_section_label("Tingle Maps");
     for (s32 i = 0; i < ARRAY_COUNT(s_tingle_maps); i++) {
         tingle_map_radios[i] = add_labeled_radio(s_tingle_maps[i].label, bool_options, ARRAY_COUNT(bool_options));
     }
     add_section_label("Bottles");
-    for (s32 i = 0; i < ARRAY_COUNT(s_bottle_slots); i++) {
-        bottle_radios[i] = add_labeled_radio(s_bottle_slots[i].label, bottle_content_names, ARRAY_COUNT(bottle_content_names));
+    {
+        RecompuiResource bottle_row = add_page_button_row();
+        for (s32 i = 0; i < ARRAY_COUNT(s_bottle_slots); i++) {
+            bottle_slot_buttons[i] =
+                recompui_create_button(editor_context, bottle_row, s_bottle_slots[i].label, BUTTONSTYLE_SECONDARY);
+            recompui_register_callback(bottle_slot_buttons[i], editor_button_pressed, NULL);
+        }
     }
-    add_section_label("Items");
-    for (s32 i = 0; i < ARRAY_COUNT(s_item_toggles); i++) {
-        item_radios[i] = add_labeled_radio(s_item_toggles[i].label, bool_options, ARRAY_COUNT(bool_options));
-    }
+    bottle_content_radio = add_labeled_radio("Selected Bottle", bottle_content_names, ARRAY_COUNT(bottle_content_names));
+
+    content_parent = page_masks;
     add_section_label("Masks");
     for (s32 i = 0; i < ARRAY_COUNT(s_mask_toggles); i++) {
         mask_radios[i] = add_labeled_radio(s_mask_toggles[i].label, bool_options, ARRAY_COUNT(bool_options));
@@ -1051,7 +1137,17 @@ void save_editor_on_init(void) {
         give_dungeons_button = recompui_create_button(editor_context, dungeon_actions, "All Dungeons", BUTTONSTYLE_SECONDARY);
         reset_dungeons_button = recompui_create_button(editor_context, dungeon_actions, "Reset Dungeons", BUTTONSTYLE_SECONDARY);
     }
+    {
+        RecompuiResource dungeon_tab_row = add_page_button_row();
+        for (s32 i = 0; i < ARRAY_COUNT(dungeon_page_buttons); i++) {
+            dungeon_page_buttons[i] =
+                recompui_create_button(editor_context, dungeon_tab_row, dungeon_names[i], BUTTONSTYLE_SECONDARY);
+            recompui_register_callback(dungeon_page_buttons[i], editor_button_pressed, NULL);
+        }
+    }
     for (s32 i = 0; i < ARRAY_COUNT(s_dungeons); i++) {
+        dungeon_pages[i] = add_child_page(page_dungeons);
+        content_parent = dungeon_pages[i];
         add_section_label(dungeon_names[i]);
         dungeon_map_radios[i] = add_labeled_radio("Map", bool_options, ARRAY_COUNT(bool_options));
         dungeon_compass_radios[i] = add_labeled_radio("Compass", bool_options, ARRAY_COUNT(bool_options));
@@ -1060,7 +1156,8 @@ void save_editor_on_init(void) {
         dungeon_fairy_sliders[i] = add_labeled_slider("Stray Fairies", 0.0f, 15.0f, 1.0f, 0.0f);
     }
 
-    set_active_page(0);
+    set_active_dungeon_page(0);
+    set_active_page(PAGE_GENERAL);
 
     button_row = recompui_create_element(editor_context, panel);
     recompui_set_display(button_row, DISPLAY_FLEX);
