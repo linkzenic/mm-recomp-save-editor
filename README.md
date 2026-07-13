@@ -10,7 +10,6 @@ The editor opens in-game and writes directly to the active save context. It is m
 - Adjust wallet, rupees, bank rupees, hearts, health, magic, double defense, Great Spin, etc
 - Set sword, shield, quiver, bomb bag, Deku Stick and Deku Nut upgrades, ammo counts, powder keg, magic beans count, bottle contents, major inventory items, and all masks.
 - Toggle Tingle maps, songs, skull tokens, dungeon items, stray fairies, and more
-- Use quick actions for maxing or resetting quest and dungeon progress
 
 ## Usage
 
